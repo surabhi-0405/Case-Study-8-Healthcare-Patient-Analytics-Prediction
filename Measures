@@ -1,0 +1,271 @@
+High Risk Factor Percentage =
+DIVIDE(
+    [High Risk Factor Admissions],
+    [Total Admissions],
+    0
+)
+---------------------------------------------------------------------------------------
+High Risk Factor Admissions =
+CALCULATE(
+    [Total Admissions],
+    'healthcare_analytics_dw fact_admission_analytics'[risk_factor_count] = 3
+)
+---------------------------------------------------------------------------------------
+High Risk Long-Stay Percentage =
+DIVIDE(
+    [High Risk Long-Stay Admissions],
+    CALCULATE(
+        [Total Admissions],
+        'healthcare_analytics_dw fact_admission_analytics'[risk_level] = "High"
+    ),
+    0
+)
+---------------------------------------------------------------------------------------
+High Risk Long-Stay Percentage =
+DIVIDE(
+    [High Risk Long-Stay Admissions],
+    [High Risk Admissions],
+    0
+)
+---------------------------------------------------------------------------------------
+High Risk Long-Stay Admissions =
+CALCULATE(
+    [Total Admissions],
+    'healthcare_analytics_dw fact_admission_analytics'[risk_level] = "High",
+    'healthcare_analytics_dw fact_admission_analytics'[length_of_stay] >= 7
+)
+---------------------------------------------------------------------------------------
+High Risk Treatment Percentage =
+DIVIDE(
+    [High Risk Treatment Count],
+    [Total Treatments],
+    0
+)
+---------------------------------------------------------------------------------------
+High Risk Treatment Count =
+CALCULATE(
+    [Total Treatments],
+    'healthcare_analytics_dw fact_admission_analytics'[risk_level] = "High"
+)
+---------------------------------------------------------------------------------------
+High Risk Previous Admission Percentage =
+DIVIDE(
+    [High Risk Previous Admissions],
+    CALCULATE(
+        [Total Admissions],
+        'healthcare_analytics_dw fact_admission_analytics'[previous_admissions] > 0
+    ),
+    0
+)
+---------------------------------------------------------------------------------------
+High Risk Previous Admissions =
+CALCULATE(
+    [Total Admissions],
+    'healthcare_analytics_dw fact_admission_analytics'[previous_admissions] > 0,
+    'healthcare_analytics_dw fact_admission_analytics'[risk_level] = "High"
+)
+---------------------------------------------------------------------------------------
+High Risk Previous Admission Percentage =
+DIVIDE(
+    CALCULATE(
+        [Total Admissions],
+        'healthcare_analytics_dw fact_admission_analytics'[previous_admissions] > 0,
+        'healthcare_analytics_dw fact_admission_analytics'[risk_level] = "High"
+    ),
+    CALCULATE(
+        [Total Admissions],
+        'healthcare_analytics_dw fact_admission_analytics'[previous_admissions] > 0
+    ),
+    0
+)
+---------------------------------------------------------------------------------------
+High Risk Chronic Percentage =
+DIVIDE(
+    [High Risk Chronic Admissions],
+    [Chronic Condition Admissions],
+    0
+)
+---------------------------------------------------------------------------------------
+High Risk Chronic Admissions =
+CALCULATE(
+    [Total Admissions],
+    'healthcare_analytics_dw fact_admission_analytics'[has_chronic_condition] = 1,
+    'healthcare_analytics_dw fact_admission_analytics'[risk_level] = "High"
+)
+---------------------------------------------------------------------------------------
+Admissions Without Chronic Condition =
+CALCULATE(
+    [Total Admissions],
+    'healthcare_analytics_dw fact_admission_analytics'[has_chronic_condition] = 0
+)
+---------------------------------------------------------------------------------------
+Chronic Condition Percentage =
+DIVIDE(
+    [Chronic Condition Admissions],
+    [Total Admissions],
+    0
+)
+---------------------------------------------------------------------------------------
+Chronic Condition Admissions =
+CALCULATE(
+    [Total Admissions],
+    'healthcare_analytics_dw fact_admission_analytics'[has_chronic_condition] = 1
+)
+---------------------------------------------------------------------------------------
+Average Risk Score by Risk Level =
+AVERAGE(
+    'healthcare_analytics_dw fact_admission_analytics'[risk_score]
+)
+---------------------------------------------------------------------------------------
+Average Previous Admissions =
+AVERAGE(
+    'healthcare_analytics_dw fact_admission_analytics'[previous_admissions]
+)
+---------------------------------------------------------------------------------------
+Average Vital Risk Flags =
+AVERAGE(
+    'healthcare_analytics_dw fact_admission_analytics'[vital_risk_flags]
+)
+---------------------------------------------------------------------------------------
+Average Treatment Count by Risk =
+AVERAGE(
+    'healthcare_analytics_dw fact_admission_analytics'[treatment_count]
+)
+---------------------------------------------------------------------------------------
+High Risk Average LOS =
+CALCULATE(
+    [Average Length of Stay],
+    'healthcare_analytics_dw fact_admission_analytics'[risk_level] = "High"
+)
+---------------------------------------------------------------------------------------
+Admissions by Risk Level =
+COUNTROWS(
+    'healthcare_analytics_dw fact_admission_analytics'
+)
+---------------------------------------------------------------------------------------
+Risk Level Percentage =
+DIVIDE(
+    [Total Admissions],
+    CALCULATE(
+        [Total Admissions],
+        ALL(
+            'healthcare_analytics_dw fact_admission_analytics'[risk_level]
+        )
+    ),
+    0
+)
+---------------------------------------------------------------------------------------
+Low Risk Admissions =
+CALCULATE(
+    [Total Admissions],
+    'healthcare_analytics_dw fact_admission_analytics'[risk_level] = "Low"
+)
+---------------------------------------------------------------------------------------
+Medium Risk Admissions =
+CALCULATE(
+    [Total Admissions],
+    'healthcare_analytics_dw fact_admission_analytics'[risk_level] = "Medium"
+)
+---------------------------------------------------------------------------------------
+High Risk Percentage =
+DIVIDE(
+    [High-Risk Admissions],
+    [Total Admissions],
+    0
+)
+---------------------------------------------------------------------------------------
+High Risk Oxygen Flagged Admissions =
+CALCULATE(
+    [Total Admissions],
+    'healthcare_analytics_dw fact_admission_analytics'[risk_level] = "High",
+    'healthcare_analytics_dw fact_admission_analytics'[avg_oxygen_level] < 92
+)
+---------------------------------------------------------------------------------------
+Low Oxygen Admissions =
+CALCULATE(
+    [Total Admissions],
+    'healthcare_analytics_dw fact_admission_analytics'[avg_oxygen_level] < 92
+)
+---------------------------------------------------------------------------------------
+Average Diastolic BP =
+AVERAGE(
+    'healthcare_analytics_dw fact_admission_analytics'[avg_diastolic_bp]
+)
+---------------------------------------------------------------------------------------
+Average Systolic BP =
+AVERAGE(
+    'healthcare_analytics_dw fact_admission_analytics'[avg_systolic_bp]
+)
+---------------------------------------------------------------------------------------
+Average Temperature =
+AVERAGE(
+    'healthcare_analytics_dw fact_admission_analytics'[avg_temperature]
+)
+---------------------------------------------------------------------------------------
+Average Heart Rate =
+AVERAGE(
+    'healthcare_analytics_dw fact_admission_analytics'[avg_heart_rate]
+)
+---------------------------------------------------------------------------------------
+Average Oxygen Level =
+AVERAGE(
+    'healthcare_analytics_dw fact_admission_analytics'[avg_oxygen_level]
+)
+---------------------------------------------------------------------------------------
+Total Treatments =
+SUM(
+    'healthcare_analytics_dw fact_admission_analytics'[treatment_count]
+)
+---------------------------------------------------------------------------------------
+Average Treatment Count =
+AVERAGE(
+    'healthcare_analytics_dw fact_admission_analytics'[treatment_count]
+)
+---------------------------------------------------------------------------------------
+Average Risk Score =
+AVERAGE(
+    'healthcare_analytics_dw fact_admission_analytics'[risk_score]
+)
+---------------------------------------------------------------------------------------
+Total Doctors =
+DISTINCTCOUNT(
+    'healthcare_analytics_dw fact_admission_analytics'[doctor_id]
+)
+---------------------------------------------------------------------------------------
+Long-Stay Percentage =
+DIVIDE(
+    [Long-Stay Admissions],
+    [Total Admissions],
+    0
+)
+---------------------------------------------------------------------------------------
+Long-Stay Admissions =
+CALCULATE(
+    [Total Admissions],
+    'healthcare_analytics_dw fact_admission_analytics'[length_of_stay] >= 7
+)
+---------------------------------------------------------------------------------------
+High-Risk Percentage =
+DIVIDE(
+    [High-Risk Admissions],
+    [Total Admissions],
+    0
+)
+---------------------------------------------------------------------------------------
+High-Risk Admissions =
+CALCULATE(
+    [Total Admissions],
+    'healthcare_analytics_dw fact_admission_analytics'[risk_level] = "High"
+)
+---------------------------------------------------------------------------------------
+Average Length of Stay =
+AVERAGE('healthcare_analytics_dw fact_admission_analytics'[length_of_stay])
+---------------------------------------------------------------------------------------
+Unique Patients =
+DISTINCTCOUNT('healthcare_analytics_dw fact_admission_analytics'[patient_id])
+---------------------------------------------------------------------------------------
+Total Admissions =
+COUNTROWS('healthcare_analytics_dw fact_admission_analytics')
+---------------------------------------------------------------------------------------
+Total Admissions =
+COUNTROWS('fact_admission_analytics')
