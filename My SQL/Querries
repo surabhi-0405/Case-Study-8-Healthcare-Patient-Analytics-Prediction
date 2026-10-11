@@ -1,76 +1,1049 @@
-
+SELECT
+    COUNT(*) AS Total_Admissions,
+    COUNT(DISTINCT patient_id) AS Unique_Patients,
+    ROUND(AVG(length_of_stay), 2) AS Avg_Length_of_Stay,
+    SUM(CASE WHEN risk_level = 'High' THEN 1 ELSE 0 END) AS High_Risk_Admissions,
+    ROUND(
+        100.0 * SUM(CASE WHEN risk_level = 'High' THEN 1 ELSE 0 END) / COUNT(*),
+        2
+    ) AS High_Risk_Percentage,
+    SUM(CASE WHEN length_of_stay >= 7 THEN 1 ELSE 0 END) AS Long_Stay_Admissions
+FROM fact_admission_analytics;
 ---------------------------------------------------------------------------------------
-
+SELECT
+    COUNT(*) AS total_admissions,
+    COUNT(DISTINCT admission_id) AS unique_admissions,
+    SUM(CASE WHEN patient_id IS NULL THEN 1 ELSE 0 END) AS missing_patient_ids,
+    SUM(CASE WHEN doctor_id IS NULL THEN 1 ELSE 0 END) AS missing_doctor_ids,
+    SUM(CASE WHEN risk_level IS NULL THEN 1 ELSE 0 END) AS missing_risk_levels,
+    SUM(CASE WHEN risk_score IS NULL THEN 1 ELSE 0 END) AS missing_risk_scores,
+    SUM(CASE WHEN length_of_stay IS NULL THEN 1 ELSE 0 END) AS missing_los
+FROM fact_admission_analytics;
 ---------------------------------------------------------------------------------------
-
+SELECT
+    risk_factor_count,
+    COUNT(*) AS admissions_count,
+    ROUND(
+        100.0 * COUNT(*) /
+        (SELECT COUNT(*) FROM fact_admission_analytics),
+        2
+    ) AS admission_percentage,
+    ROUND(AVG(risk_score), 2) AS avg_risk_score,
+    ROUND(AVG(length_of_stay), 2) AS avg_length_of_stay,
+    ROUND(AVG(treatment_count), 2) AS avg_treatments
+FROM fact_admission_analytics
+GROUP BY risk_factor_count
+ORDER BY risk_factor_count;
 ---------------------------------------------------------------------------------------
-
+SELECT
+    diagnosis,
+    risk_level,
+    COUNT(*) AS admissions_count,
+    ROUND(
+        100.0 * COUNT(*) /
+        SUM(COUNT(*)) OVER (PARTITION BY diagnosis),
+        2
+    ) AS risk_percentage,
+    ROUND(AVG(length_of_stay), 2) AS avg_length_of_stay
+FROM fact_admission_analytics
+GROUP BY
+    diagnosis,
+    risk_level
+ORDER BY
+    diagnosis,
+    CASE risk_level
+        WHEN 'Low' THEN 1
+        WHEN 'Medium' THEN 2
+        WHEN 'High' THEN 3
+    END;
 ---------------------------------------------------------------------------------------
-
+SELECT
+    CASE
+        WHEN has_chronic_condition = 1 THEN 'Chronic Condition'
+        ELSE 'No Recorded Condition'
+    END AS chronic_status,
+    risk_level,
+    COUNT(*) AS admissions_count,
+    ROUND(
+        100.0 * COUNT(*) /
+        SUM(COUNT(*)) OVER (PARTITION BY has_chronic_condition),
+        2
+    ) AS risk_percentage,
+    ROUND(AVG(length_of_stay), 2) AS avg_length_of_stay
+FROM fact_admission_analytics
+GROUP BY
+    has_chronic_condition,
+    risk_level
+ORDER BY
+    has_chronic_condition DESC,
+    CASE risk_level
+        WHEN 'Low' THEN 1
+        WHEN 'Medium' THEN 2
+        WHEN 'High' THEN 3
+    END;
 ---------------------------------------------------------------------------------------
-
+SELECT
+    gender,
+    risk_level,
+    COUNT(*) AS admissions_count,
+    ROUND(
+        100.0 * COUNT(*) /
+        SUM(COUNT(*)) OVER (PARTITION BY gender),
+        2
+    ) AS risk_percentage_within_gender,
+    ROUND(AVG(length_of_stay), 2) AS avg_length_of_stay
+FROM fact_admission_analytics
+GROUP BY
+    gender,
+    risk_level
+ORDER BY
+    gender,
+    CASE risk_level
+        WHEN 'Low' THEN 1
+        WHEN 'Medium' THEN 2
+        WHEN 'High' THEN 3
+    END;
 ---------------------------------------------------------------------------------------
-
+SELECT
+    risk_level,
+    COUNT(*) AS admissions_count,
+    ROUND(
+        100.0 * COUNT(*) /
+        (SELECT COUNT(*) FROM fact_admission_analytics),
+        2
+    ) AS admission_percentage,
+    ROUND(AVG(risk_score), 2) AS avg_risk_score,
+    ROUND(AVG(length_of_stay), 2) AS avg_length_of_stay
+FROM fact_admission_analytics
+GROUP BY risk_level
+ORDER BY
+    CASE risk_level
+        WHEN 'Low' THEN 1
+        WHEN 'Medium' THEN 2
+        WHEN 'High' THEN 3
+    END;
 ---------------------------------------------------------------------------------------
-
+SELECT
+    COUNT(*) AS total_admissions,
+    COUNT(DISTINCT patient_id) AS unique_patients,
+    ROUND(AVG(length_of_stay), 2) AS avg_length_of_stay,
+    SUM(CASE WHEN length_of_stay >= 7 THEN 1 ELSE 0 END) AS long_stay_admissions,
+    ROUND(
+        100.0 * SUM(CASE WHEN length_of_stay >= 7 THEN 1 ELSE 0 END) / COUNT(*),
+        2
+    ) AS long_stay_percentage,
+    SUM(CASE WHEN risk_level = 'High' THEN 1 ELSE 0 END) AS high_risk_admissions,
+    ROUND(
+        100.0 * SUM(CASE WHEN risk_level = 'High' THEN 1 ELSE 0 END) / COUNT(*),
+        2
+    ) AS high_risk_percentage,
+    COUNT(DISTINCT diagnosis) AS diagnosis_types,
+    COUNT(DISTINCT doctor_id) AS active_doctors
+FROM fact_admission_analytics;
 ---------------------------------------------------------------------------------------
-
+SELECT
+    DATE_FORMAT(t.treatment_date, '%Y-%m') AS treatment_month,
+    COUNT(t.treatment_id) AS total_treatments,
+    COUNT(DISTINCT t.admission_id) AS admissions_count,
+    ROUND(
+        COUNT(t.treatment_id) / COUNT(DISTINCT t.admission_id),
+        2
+    ) AS avg_treatments_per_admission
+FROM fact_treatment t
+GROUP BY DATE_FORMAT(t.treatment_date, '%Y-%m')
+ORDER BY treatment_month;
 ---------------------------------------------------------------------------------------
-
+SELECT
+    CASE
+        WHEN a.has_chronic_condition = 1 THEN 'Chronic Condition'
+        ELSE 'No Recorded Condition'
+    END AS chronic_status,
+    COUNT(t.treatment_id) AS total_treatments,
+    COUNT(DISTINCT t.admission_id) AS admissions_count,
+    ROUND(
+        COUNT(t.treatment_id) / COUNT(DISTINCT t.admission_id),
+        2
+    ) AS avg_treatments_per_admission
+FROM fact_treatment t
+JOIN fact_admission_analytics a
+    ON t.admission_id = a.admission_id
+GROUP BY a.has_chronic_condition
+ORDER BY a.has_chronic_condition DESC;
 ---------------------------------------------------------------------------------------
-
+SELECT
+    treatment_count,
+    COUNT(*) AS admissions_count,
+    ROUND(
+        100.0 * COUNT(*) / (SELECT COUNT(*) FROM fact_admission),
+        2
+    ) AS admission_percentage
+FROM (
+    SELECT
+        admission_id,
+        COUNT(*) AS treatment_count
+    FROM fact_treatment
+    GROUP BY admission_id
+) AS treatment_summary
+GROUP BY treatment_count
+ORDER BY treatment_count;
 ---------------------------------------------------------------------------------------
-
+SELECT
+    COUNT(*) AS total_admissions,
+    COUNT(DISTINCT a.admission_id) AS admissions_with_treatment,
+    COUNT(*) - COUNT(DISTINCT a.admission_id) AS admissions_without_treatment,
+    ROUND(
+        100.0 * COUNT(DISTINCT a.admission_id) / COUNT(*),
+        2
+    ) AS treatment_coverage_percentage
+FROM fact_admission a
+LEFT JOIN fact_treatment t
+    ON a.admission_id = t.admission_id;
 ---------------------------------------------------------------------------------------
-
+SELECT
+    COUNT(*) AS total_treatment_records,
+    COUNT(DISTINCT treatment_id) AS unique_treatments,
+    COUNT(DISTINCT admission_id) AS admissions_with_treatment,
+    COUNT(DISTINCT `procedure`) AS procedure_types,
+    COUNT(DISTINCT medication) AS medication_types,
+    ROUND(
+        COUNT(*) / COUNT(DISTINCT admission_id),
+        2
+    ) AS avg_treatments_per_admission
+FROM fact_treatment;
 ---------------------------------------------------------------------------------------
-
+SELECT
+    a.diagnosis,
+    a.length_of_stay,
+    COUNT(t.treatment_id) AS total_treatments,
+    COUNT(DISTINCT t.admission_id) AS admissions_count,
+    ROUND(
+        COUNT(t.treatment_id) / COUNT(DISTINCT t.admission_id),
+        2
+    ) AS avg_treatments_per_admission
+FROM fact_treatment t
+JOIN fact_admission_analytics a
+    ON t.admission_id = a.admission_id
+GROUP BY
+    a.diagnosis,
+    a.length_of_stay
+ORDER BY
+    a.diagnosis,
+    a.length_of_stay;
 ---------------------------------------------------------------------------------------
-
+SELECT
+    a.diagnosis,
+    t.`procedure`,
+    COUNT(*) AS treatment_count,
+    COUNT(DISTINCT t.admission_id) AS admissions_count
+FROM fact_treatment t
+JOIN fact_admission_analytics a
+    ON t.admission_id = a.admission_id
+GROUP BY
+    a.diagnosis,
+    t.`procedure`
+ORDER BY
+    a.diagnosis,
+    treatment_count DESC;
 ---------------------------------------------------------------------------------------
-
+SELECT
+    a.risk_level,
+    t.`procedure`,
+    COUNT(*) AS treatment_count,
+    COUNT(DISTINCT t.admission_id) AS admissions_count,
+    ROUND(
+        100.0 * COUNT(*) /
+        SUM(COUNT(*)) OVER (PARTITION BY a.risk_level),
+        2
+    ) AS treatment_percentage
+FROM fact_treatment t
+JOIN fact_admission_analytics a
+    ON t.admission_id = a.admission_id
+GROUP BY
+    a.risk_level,
+    t.`procedure`
+ORDER BY
+    CASE a.risk_level
+        WHEN 'Low' THEN 1
+        WHEN 'Medium' THEN 2
+        WHEN 'High' THEN 3
+    END,
+    treatment_count DESC;
 ---------------------------------------------------------------------------------------
-
+SELECT
+    `procedure`,
+    medication,
+    COUNT(*) AS treatment_count,
+    COUNT(DISTINCT admission_id) AS admissions_count
+FROM fact_treatment
+GROUP BY
+    `procedure`,
+    medication
+ORDER BY treatment_count DESC;
 ---------------------------------------------------------------------------------------
-
+SELECT
+    a.admission_id,
+    a.diagnosis,
+    a.risk_level,
+    a.length_of_stay,
+    COUNT(t.treatment_id) AS treatment_count
+FROM fact_treatment t
+JOIN fact_admission_analytics a
+    ON t.admission_id = a.admission_id
+GROUP BY
+    a.admission_id,
+    a.diagnosis,
+    a.risk_level,
+    a.length_of_stay
+HAVING COUNT(t.treatment_id) = (
+    SELECT MAX(treatment_count)
+    FROM (
+        SELECT
+            admission_id,
+            COUNT(*) AS treatment_count
+        FROM fact_treatment
+        GROUP BY admission_id
+    ) AS treatment_summary
+)
+ORDER BY a.admission_id;
 ---------------------------------------------------------------------------------------
-
+SELECT
+    a.length_of_stay,
+    a.risk_level,
+    COUNT(t.treatment_id) AS total_treatments,
+    COUNT(DISTINCT t.admission_id) AS admissions_count,
+    ROUND(
+        COUNT(t.treatment_id) / COUNT(DISTINCT t.admission_id),
+        2
+    ) AS avg_treatments_per_admission
+FROM fact_treatment t
+JOIN fact_admission_analytics a
+    ON t.admission_id = a.admission_id
+GROUP BY
+    a.length_of_stay,
+    a.risk_level
+ORDER BY
+    a.length_of_stay,
+    CASE a.risk_level
+        WHEN 'Low' THEN 1
+        WHEN 'Medium' THEN 2
+        WHEN 'High' THEN 3
+    END;
 ---------------------------------------------------------------------------------------
-
+SELECT
+    a.diagnosis,
+    a.risk_level,
+    COUNT(t.treatment_id) AS total_treatments,
+    COUNT(DISTINCT t.admission_id) AS admissions_count,
+    ROUND(
+        COUNT(t.treatment_id) / COUNT(DISTINCT t.admission_id),
+        2
+    ) AS avg_treatments_per_admission
+FROM fact_treatment t
+JOIN fact_admission_analytics a
+    ON t.admission_id = a.admission_id
+GROUP BY
+    a.diagnosis,
+    a.risk_level
+ORDER BY
+    a.diagnosis,
+    CASE a.risk_level
+        WHEN 'Low' THEN 1
+        WHEN 'Medium' THEN 2
+        WHEN 'High' THEN 3
+    END;
 ---------------------------------------------------------------------------------------
-
+SELECT
+    DATE_FORMAT(a.admission_date, '%Y-%m') AS admission_month,
+    a.risk_level,
+    COUNT(t.treatment_id) AS total_treatments,
+    COUNT(DISTINCT t.admission_id) AS admissions_count,
+    ROUND(
+        COUNT(t.treatment_id) / COUNT(DISTINCT t.admission_id),
+        2
+    ) AS avg_treatments_per_admission
+FROM fact_treatment t
+JOIN fact_admission_analytics a
+    ON t.admission_id = a.admission_id
+GROUP BY
+    DATE_FORMAT(a.admission_date, '%Y-%m'),
+    a.risk_level
+ORDER BY
+    admission_month,
+    CASE a.risk_level
+        WHEN 'Low' THEN 1
+        WHEN 'Medium' THEN 2
+        WHEN 'High' THEN 3
+    END;
 ---------------------------------------------------------------------------------------
-
+SELECT
+    CASE
+        WHEN a.has_chronic_condition = 1 THEN 'Chronic Condition'
+        ELSE 'No Recorded Condition'
+    END AS chronic_status,
+    COUNT(t.treatment_id) AS total_treatments,
+    COUNT(DISTINCT t.admission_id) AS admissions_count,
+    ROUND(
+        COUNT(t.treatment_id) / COUNT(DISTINCT t.admission_id),
+        2
+    ) AS avg_treatments_per_admission
+FROM fact_treatment t
+JOIN fact_admission_analytics a
+    ON t.admission_id = a.admission_id
+GROUP BY a.has_chronic_condition
+ORDER BY a.has_chronic_condition DESC;
 ---------------------------------------------------------------------------------------
-
+SELECT
+    treatment_count,
+    COUNT(*) AS admissions_count,
+    ROUND(
+        100.0 * COUNT(*) / (SELECT COUNT(*) FROM fact_admission),
+        2
+    ) AS admission_percentage
+FROM (
+    SELECT
+        admission_id,
+        COUNT(*) AS treatment_count
+    FROM fact_treatment
+    GROUP BY admission_id
+) AS treatment_summary
+GROUP BY treatment_count
+ORDER BY treatment_count;
 ---------------------------------------------------------------------------------------
-
+SELECT
+    a.risk_level,
+    t.`procedure`,
+    COUNT(*) AS treatment_count
+FROM fact_treatment t
+JOIN fact_admission_analytics a
+    ON t.admission_id = a.admission_id
+GROUP BY
+    a.risk_level,
+    t.`procedure`
+ORDER BY
+    CASE a.risk_level
+        WHEN 'Low' THEN 1
+        WHEN 'Medium' THEN 2
+        WHEN 'High' THEN 3
+    END,
+    treatment_count DESC;
 ---------------------------------------------------------------------------------------
-
+SELECT
+    a.length_of_stay,
+    COUNT(t.treatment_id) AS total_treatments,
+    COUNT(DISTINCT t.admission_id) AS admissions_with_treatment,
+    ROUND(
+        COUNT(t.treatment_id) / COUNT(DISTINCT t.admission_id),
+        2
+    ) AS avg_treatments_per_admission
+FROM fact_treatment t
+JOIN fact_admission a
+    ON t.admission_id = a.admission_id
+GROUP BY a.length_of_stay
+ORDER BY a.length_of_stay;
 ---------------------------------------------------------------------------------------
-
+SELECT
+    a.risk_level,
+    COUNT(t.treatment_id) AS total_treatments,
+    COUNT(DISTINCT t.admission_id) AS admissions_with_treatment,
+    ROUND(
+        COUNT(t.treatment_id) / COUNT(DISTINCT t.admission_id),
+        2
+    ) AS avg_treatments_per_admission
+FROM fact_treatment t
+JOIN fact_admission_analytics a
+    ON t.admission_id = a.admission_id
+GROUP BY a.risk_level
+ORDER BY
+    CASE a.risk_level
+        WHEN 'Low' THEN 1
+        WHEN 'Medium' THEN 2
+        WHEN 'High' THEN 3
+    END;
 ---------------------------------------------------------------------------------------
-
+SELECT
+    a.doctor_id,
+    COUNT(t.treatment_id) AS total_treatments,
+    COUNT(DISTINCT t.admission_id) AS admissions_with_treatment,
+    ROUND(COUNT(t.treatment_id) / COUNT(DISTINCT t.admission_id), 2) AS avg_treatments_per_admission
+FROM fact_treatment t
+JOIN fact_admission a
+    ON t.admission_id = a.admission_id
+GROUP BY a.doctor_id
+ORDER BY total_treatments DESC;
 ---------------------------------------------------------------------------------------
-
+SELECT
+    a.diagnosis,
+    COUNT(t.treatment_id) AS total_treatments,
+    COUNT(DISTINCT t.admission_id) AS admissions_with_treatment,
+    ROUND(COUNT(t.treatment_id) / COUNT(DISTINCT t.admission_id), 2) AS avg_treatments_per_admission
+FROM fact_treatment t
+JOIN fact_admission a
+    ON t.admission_id = a.admission_id
+GROUP BY a.diagnosis
+ORDER BY total_treatments DESC;
 ---------------------------------------------------------------------------------------
-
+SELECT
+    medication,
+    COUNT(*) AS total_treatments,
+    COUNT(DISTINCT admission_id) AS admissions_count
+FROM fact_treatment
+GROUP BY medication
+ORDER BY total_treatments DESC;
 ---------------------------------------------------------------------------------------
-
+SELECT
+    `procedure`,
+    COUNT(*) AS total_treatments,
+    COUNT(DISTINCT admission_id) AS admissions_count
+FROM fact_treatment
+GROUP BY `procedure`
+ORDER BY total_treatments DESC;
 ---------------------------------------------------------------------------------------
-
+SELECT
+    procedure,
+    COUNT(*) AS total_treatments,
+    COUNT(DISTINCT admission_id) AS admissions_count
+FROM fact_treatment
+GROUP BY procedure
+ORDER BY total_treatments DESC;
 ---------------------------------------------------------------------------------------
-
+SELECT
+    room_no,
+    COUNT(*) AS total_admissions,
+    COUNT(DISTINCT patient_id) AS unique_patients,
+    ROUND(AVG(length_of_stay), 2) AS avg_length_of_stay,
+    SUM(CASE WHEN risk_level = 'High' THEN 1 ELSE 0 END) AS high_risk_admissions,
+    ROUND(
+        100.0 * SUM(CASE WHEN risk_level = 'High' THEN 1 ELSE 0 END)
+        / COUNT(*),
+        2
+    ) AS high_risk_percentage
+FROM fact_admission_analytics
+GROUP BY room_no
+ORDER BY total_admissions DESC
+LIMIT 10;
 ---------------------------------------------------------------------------------------
-
+SELECT
+    room_no,
+    COUNT(*) AS total_admissions,
+    COUNT(DISTINCT patient_id) AS unique_patients,
+    ROUND(AVG(length_of_stay), 2) AS avg_length_of_stay,
+    SUM(CASE WHEN risk_level = 'High' THEN 1 ELSE 0 END) AS high_risk_admissions,
+    ROUND(
+        100.0 * SUM(CASE WHEN risk_level = 'High' THEN 1 ELSE 0 END)
+        / COUNT(*),
+        2
+    ) AS high_risk_percentage
+FROM fact_admission_analytics
+GROUP BY room_no
+ORDER BY total_admissions DESC;
 ---------------------------------------------------------------------------------------
-
+SELECT
+    risk_level,
+    COUNT(*) AS total_admissions,
+    ROUND(AVG(avg_heart_rate), 2) AS avg_heart_rate,
+    ROUND(AVG(avg_oxygen_level), 2) AS avg_oxygen_level,
+    ROUND(AVG(avg_temperature), 2) AS avg_temperature,
+    ROUND(AVG(avg_systolic_bp), 2) AS avg_systolic_bp,
+    ROUND(AVG(avg_diastolic_bp), 2) AS avg_diastolic_bp
+FROM fact_admission_analytics
+GROUP BY risk_level
+ORDER BY
+    CASE risk_level
+        WHEN 'Low' THEN 1
+        WHEN 'Medium' THEN 2
+        WHEN 'High' THEN 3
+    END;
 ---------------------------------------------------------------------------------------
-
+SELECT
+    diagnosis,
+    COUNT(*) AS total_admissions,
+    ROUND(AVG(treatment_count), 2) AS avg_treatments,
+    ROUND(AVG(procedure_count), 2) AS avg_procedures,
+    ROUND(AVG(medication_count), 2) AS avg_medications,
+    SUM(treatment_count) AS total_treatments,
+    ROUND(AVG(length_of_stay), 2) AS avg_length_of_stay
+FROM fact_admission_analytics
+GROUP BY diagnosis
+ORDER BY avg_treatments DESC;
 ---------------------------------------------------------------------------------------
-
+SELECT
+    risk_level,
+    COUNT(*) AS total_admissions,
+    MIN(length_of_stay) AS min_length_of_stay,
+    ROUND(AVG(length_of_stay), 2) AS avg_length_of_stay,
+    MAX(length_of_stay) AS max_length_of_stay,
+    ROUND(
+        100.0 * SUM(CASE WHEN length_of_stay >= 7 THEN 1 ELSE 0 END)
+        / COUNT(*),
+        2
+    ) AS long_stay_percentage
+FROM fact_admission_analytics
+GROUP BY risk_level
+ORDER BY
+    CASE risk_level
+        WHEN 'Low' THEN 1
+        WHEN 'Medium' THEN 2
+        WHEN 'High' THEN 3
+    END;
 ---------------------------------------------------------------------------------------
-
+SELECT
+    gender,
+    COUNT(*) AS total_admissions,
+    COUNT(DISTINCT patient_id) AS unique_patients,
+    ROUND(AVG(length_of_stay), 2) AS avg_length_of_stay,
+    SUM(CASE WHEN risk_level = 'High' THEN 1 ELSE 0 END) AS high_risk_admissions,
+    ROUND(
+        100.0 * SUM(CASE WHEN risk_level = 'High' THEN 1 ELSE 0 END)
+        / COUNT(*),
+        2
+    ) AS high_risk_percentage
+FROM fact_admission_analytics
+GROUP BY gender
+ORDER BY total_admissions DESC;
 ---------------------------------------------------------------------------------------
-
+SELECT
+    DATE_FORMAT(admission_date, '%Y-%m') AS admission_month,
+    SUM(CASE WHEN risk_level = 'Low' THEN 1 ELSE 0 END) AS low_risk,
+    SUM(CASE WHEN risk_level = 'Medium' THEN 1 ELSE 0 END) AS medium_risk,
+    SUM(CASE WHEN risk_level = 'High' THEN 1 ELSE 0 END) AS high_risk,
+    COUNT(*) AS total_admissions,
+    ROUND(
+        100.0 * SUM(CASE WHEN risk_level = 'High' THEN 1 ELSE 0 END)
+        / COUNT(*),
+        2
+    ) AS high_risk_percentage
+FROM fact_admission_analytics
+GROUP BY DATE_FORMAT(admission_date, '%Y-%m')
+ORDER BY admission_month;
 ---------------------------------------------------------------------------------------
+SELECT
+    doctor_id,
+    COUNT(*) AS total_admissions,
+    COUNT(DISTINCT patient_id) AS unique_patients,
+    ROUND(AVG(length_of_stay), 2) AS avg_length_of_stay,
+    SUM(CASE WHEN risk_level = 'High' THEN 1 ELSE 0 END) AS high_risk_admissions,
+    ROUND(
+        100.0 * SUM(CASE WHEN risk_level = 'High' THEN 1 ELSE 0 END)
+        / COUNT(*),
+        2
+    ) AS high_risk_percentage
+FROM fact_admission_analytics
+GROUP BY doctor_id
+ORDER BY total_admissions DESC;
+---------------------------------------------------------------------------------------
+SELECT
+    risk_score,
+    COUNT(*) AS total_admissions,
+    ROUND(
+        100.0 * COUNT(*) /
+        (SELECT COUNT(*) FROM fact_admission_analytics),
+        2
+    ) AS percentage,
+    ROUND(AVG(length_of_stay), 2) AS avg_length_of_stay
+FROM fact_admission_analytics
+GROUP BY risk_score
+ORDER BY risk_score;
+---------------------------------------------------------------------------------------
+SELECT
+    vital_risk_flags,
+    COUNT(*) AS total_admissions,
+    SUM(CASE WHEN risk_level = 'Low' THEN 1 ELSE 0 END) AS low_risk,
+    SUM(CASE WHEN risk_level = 'Medium' THEN 1 ELSE 0 END) AS medium_risk,
+    SUM(CASE WHEN risk_level = 'High' THEN 1 ELSE 0 END) AS high_risk,
+    ROUND(
+        100.0 * SUM(CASE WHEN risk_level = 'High' THEN 1 ELSE 0 END)
+        / COUNT(*),
+        2
+    ) AS high_risk_percentage,
+    ROUND(AVG(length_of_stay), 2) AS avg_length_of_stay
+FROM fact_admission_analytics
+GROUP BY vital_risk_flags
+ORDER BY vital_risk_flags;
+---------------------------------------------------------------------------------------
+SELECT
+    previous_admissions,
+    COUNT(*) AS total_admissions,
+    SUM(CASE WHEN risk_level = 'Low' THEN 1 ELSE 0 END) AS low_risk,
+    SUM(CASE WHEN risk_level = 'Medium' THEN 1 ELSE 0 END) AS medium_risk,
+    SUM(CASE WHEN risk_level = 'High' THEN 1 ELSE 0 END) AS high_risk,
+    ROUND(
+        100.0 * SUM(CASE WHEN risk_level = 'High' THEN 1 ELSE 0 END)
+        / COUNT(*),
+        2
+    ) AS high_risk_percentage,
+    ROUND(AVG(length_of_stay), 2) AS avg_length_of_stay
+FROM fact_admission_analytics
+GROUP BY previous_admissions
+ORDER BY previous_admissions;
+---------------------------------------------------------------------------------------
+SELECT
+    age_group,
+    COUNT(*) AS total_admissions,
+    SUM(CASE WHEN risk_level = 'Low' THEN 1 ELSE 0 END) AS low_risk,
+    SUM(CASE WHEN risk_level = 'Medium' THEN 1 ELSE 0 END) AS medium_risk,
+    SUM(CASE WHEN risk_level = 'High' THEN 1 ELSE 0 END) AS high_risk,
+    ROUND(
+        100.0 * SUM(CASE WHEN risk_level = 'High' THEN 1 ELSE 0 END)
+        / COUNT(*),
+        2
+    ) AS high_risk_percentage,
+    ROUND(AVG(length_of_stay), 2) AS avg_length_of_stay
+FROM fact_admission_analytics
+GROUP BY age_group
+ORDER BY
+    CASE age_group
+        WHEN '18-30' THEN 1
+        WHEN '31-45' THEN 2
+        WHEN '46-60' THEN 3
+        WHEN '61-75' THEN 4
+        WHEN '76+' THEN 5
+    END;
+---------------------------------------------------------------------------------------
+SELECT
+    risk_level,
+    COUNT(*) AS total_admissions,
+    ROUND(
+        100.0 * COUNT(*) /
+        (SELECT COUNT(*) FROM fact_admission_analytics),
+        2
+    ) AS percentage,
+    ROUND(AVG(risk_score), 2) AS avg_risk_score,
+    ROUND(AVG(length_of_stay), 2) AS avg_length_of_stay
+FROM fact_admission_analytics
+GROUP BY risk_level
+ORDER BY
+    CASE risk_level
+        WHEN 'Low' THEN 1
+        WHEN 'Medium' THEN 2
+        WHEN 'High' THEN 3
+    END;
+---------------------------------------------------------------------------------------
+SELECT
+    diagnosis,
+    SUM(CASE WHEN risk_level = 'Low' THEN 1 ELSE 0 END) AS low_risk,
+    SUM(CASE WHEN risk_level = 'Medium' THEN 1 ELSE 0 END) AS medium_risk,
+    SUM(CASE WHEN risk_level = 'High' THEN 1 ELSE 0 END) AS high_risk,
+    COUNT(*) AS total_admissions,
+    ROUND(
+        100.0 * SUM(CASE WHEN risk_level = 'High' THEN 1 ELSE 0 END)
+        / COUNT(*),
+        2
+    ) AS high_risk_percentage
+FROM fact_admission_analytics
+GROUP BY diagnosis
+ORDER BY high_risk_percentage DESC;
+---------------------------------------------------------------------------------------
+SELECT
+    diagnosis,
+    COUNT(*) AS total_admissions,
+    ROUND(
+        100.0 * COUNT(*) /
+        (SELECT COUNT(*) FROM fact_admission_analytics),
+        2
+    ) AS admission_percentage,
+    ROUND(AVG(length_of_stay), 2) AS avg_length_of_stay,
+    SUM(CASE WHEN risk_level = 'High' THEN 1 ELSE 0 END) AS high_risk_admissions,
+    ROUND(
+        100.0 * SUM(CASE WHEN risk_level = 'High' THEN 1 ELSE 0 END)
+        / COUNT(*),
+        2
+    ) AS high_risk_percentage
+FROM fact_admission_analytics
+GROUP BY diagnosis
+ORDER BY total_admissions DESC;
+---------------------------------------------------------------------------------------
+SELECT
+    COUNT(*) AS total_admissions,
+    COUNT(DISTINCT patient_id) AS unique_patients,
+    ROUND(AVG(length_of_stay), 2) AS avg_length_of_stay,
+    MIN(length_of_stay) AS min_length_of_stay,
+    MAX(length_of_stay) AS max_length_of_stay,
+    SUM(CASE WHEN risk_level = 'High' THEN 1 ELSE 0 END) AS high_risk_admissions,
+    ROUND(
+        100.0 * SUM(CASE WHEN risk_level = 'High' THEN 1 ELSE 0 END)
+        / COUNT(*),
+        2
+    ) AS high_risk_percentage
+FROM fact_admission_analytics;
+---------------------------------------------------------------------------------------
+USE healthcare_analytics_dw;
+
+-- Admissions → Patients
+SELECT COUNT(*) AS invalid_patient_references
+FROM fact_admission a
+LEFT JOIN dim_patient p
+    ON a.patient_id = p.patient_id
+WHERE p.patient_id IS NULL;
+
+-- Admissions → Doctors
+SELECT COUNT(*) AS invalid_doctor_references
+FROM fact_admission a
+LEFT JOIN dim_doctor d
+    ON a.doctor_id = d.doctor_id
+WHERE d.doctor_id IS NULL;
+
+-- Treatments → Admissions
+SELECT COUNT(*) AS invalid_treatment_admission_references
+FROM fact_treatment t
+LEFT JOIN fact_admission a
+    ON t.admission_id = a.admission_id
+WHERE a.admission_id IS NULL;
+
+-- Vitals → Admissions
+SELECT COUNT(*) AS invalid_vital_admission_references
+FROM fact_vital v
+LEFT JOIN fact_admission a
+    ON v.admission_id = a.admission_id
+WHERE a.admission_id IS NULL;
+
+-- Analytics → Admissions
+SELECT COUNT(*) AS invalid_analytics_admission_references
+FROM fact_admission_analytics fa
+LEFT JOIN fact_admission a
+    ON fa.admission_id = a.admission_id
+WHERE a.admission_id IS NULL;
+---------------------------------------------------------------------------------------
+SELECT
+    'dim_patient' AS table_name,
+    COUNT(*) AS total_rows,
+    COUNT(DISTINCT patient_id) AS unique_ids
+FROM dim_patient
+
+UNION ALL
+
+SELECT
+    'dim_doctor',
+    COUNT(*),
+    COUNT(DISTINCT doctor_id)
+FROM dim_doctor
+
+UNION ALL
+
+SELECT
+    'fact_admission',
+    COUNT(*),
+    COUNT(DISTINCT admission_id)
+FROM fact_admission
+
+UNION ALL
+
+SELECT
+    'fact_treatment',
+    COUNT(*),
+    COUNT(DISTINCT treatment_id)
+FROM fact_treatment
+
+UNION ALL
+
+SELECT
+    'fact_vital',
+    COUNT(*),
+    COUNT(DISTINCT vital_id)
+FROM fact_vital
+
+UNION ALL
+
+SELECT
+    'fact_admission_analytics',
+    COUNT(*),
+    COUNT(DISTINCT admission_id)
+FROM fact_admission_analytics;
+---------------------------------------------------------------------------------------
+USE healthcare_analytics_dw;
+
+SELECT 'dim_patient' AS table_name, COUNT(*) AS row_count
+FROM dim_patient
+
+UNION ALL
+
+SELECT 'dim_doctor', COUNT(*)
+FROM dim_doctor
+
+UNION ALL
+
+SELECT 'fact_admission', COUNT(*)
+FROM fact_admission
+
+UNION ALL
+
+SELECT 'fact_treatment', COUNT(*)
+FROM fact_treatment
+
+UNION ALL
+
+SELECT 'fact_vital', COUNT(*)
+FROM fact_vital
+
+UNION ALL
+
+SELECT 'fact_admission_analytics', COUNT(*)
+FROM fact_admission_analytics;
+---------------------------------------------------------------------------------------
+SELECT COUNT(*) AS doctor_count
+FROM dim_doctor;
+---------------------------------------------------------------------------------------
+LOAD DATA LOCAL INFILE 'C:/path/to/patients_clean.csv'
+INTO TABLE dim_patient
+FIELDS TERMINATED BY ','
+ENCLOSED BY '"'
+LINES TERMINATED BY '\n'
+IGNORE 1 ROWS
+(
+    patient_id,
+    first_name,
+    last_name,
+    dob,
+    gender,
+    contact_no,
+    address,
+    chronic_conditions,
+    age,
+    has_chronic_condition
+);
+---------------------------------------------------------------------------------------
+USE healthcare_analytics_dw;
+
+SHOW TABLES;
+---------------------------------------------------------------------------------------
+-- ============================================================
+-- HEALTHCARE ANALYTICS DATA WAREHOUSE
+-- Table Creation
+-- ============================================================
+
+USE healthcare_analytics_dw;
+
+-- ------------------------------------------------------------
+-- 1. Patient Dimension
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS dim_patient (
+    patient_id INT PRIMARY KEY,
+    first_name VARCHAR(100),
+    last_name VARCHAR(100),
+    dob DATE,
+    gender VARCHAR(20),
+    contact_no BIGINT,
+    address VARCHAR(255),
+    chronic_conditions VARCHAR(100),
+    age INT,
+    has_chronic_condition TINYINT
+);
+
+-- ------------------------------------------------------------
+-- 2. Doctor Dimension
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS dim_doctor (
+    doctor_id INT PRIMARY KEY,
+    first_name VARCHAR(100),
+    last_name VARCHAR(100),
+    specialization VARCHAR(100),
+    contact_no BIGINT
+);
+
+-- ------------------------------------------------------------
+-- 3. Admission Fact
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS fact_admission (
+    admission_id INT PRIMARY KEY,
+    patient_id INT,
+    admission_date DATETIME,
+    discharge_date DATETIME,
+    diagnosis VARCHAR(100),
+    doctor_id INT,
+    room_no VARCHAR(50),
+    length_of_stay INT,
+    previous_admissions INT,
+
+    CONSTRAINT fk_admission_patient
+        FOREIGN KEY (patient_id)
+        REFERENCES dim_patient(patient_id),
+
+    CONSTRAINT fk_admission_doctor
+        FOREIGN KEY (doctor_id)
+        REFERENCES dim_doctor(doctor_id)
+);
+
+-- ------------------------------------------------------------
+-- 4. Treatment Fact
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS fact_treatment (
+    treatment_id INT PRIMARY KEY,
+    admission_id INT,
+    treatment_date DATETIME,
+    `procedure` VARCHAR(150),
+    medication VARCHAR(100),
+    dosage VARCHAR(100),
+
+    CONSTRAINT fk_treatment_admission
+        FOREIGN KEY (admission_id)
+        REFERENCES fact_admission(admission_id)
+);
+
+-- ------------------------------------------------------------
+-- 5. Vital Signs Fact
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS fact_vital (
+    vital_id INT PRIMARY KEY,
+    admission_id INT,
+    recorded_time DATETIME,
+    heart_rate INT,
+    blood_pressure VARCHAR(20),
+    oxygen_level INT,
+    temperature DECIMAL(5,2),
+    systolic_bp INT,
+    diastolic_bp INT,
+
+    CONSTRAINT fk_vital_admission
+        FOREIGN KEY (admission_id)
+        REFERENCES fact_admission(admission_id)
+);
+
+-- ------------------------------------------------------------
+-- 6. Admission-Level Analytics Fact
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS fact_admission_analytics (
+    admission_id INT PRIMARY KEY,
+    patient_id INT,
+    admission_date DATETIME,
+    discharge_date DATETIME,
+    diagnosis VARCHAR(100),
+    doctor_id INT,
+    room_no VARCHAR(50),
+    length_of_stay INT,
+    previous_admissions INT,
+    age INT,
+    gender VARCHAR(20),
+    chronic_conditions VARCHAR(100),
+    has_chronic_condition TINYINT,
+
+    avg_heart_rate DECIMAL(10,2),
+    min_heart_rate INT,
+    max_heart_rate INT,
+
+    avg_oxygen_level DECIMAL(10,2),
+    min_oxygen_level INT,
+
+    avg_temperature DECIMAL(10,2),
+    max_temperature DECIMAL(10,2),
+
+    avg_systolic_bp DECIMAL(10,2),
+    avg_diastolic_bp DECIMAL(10,2),
+
+    vital_readings INT,
+    treatment_count INT,
+    procedure_count INT,
+    medication_count INT,
+
+    admission_month VARCHAR(20),
+    vital_risk_flags TINYINT,
+    age_group VARCHAR(20),
+    risk_factor_count INT,
+
+    risk_score INT,
+    risk_level VARCHAR(20),
+
+    CONSTRAINT fk_analytics_admission
+        FOREIGN KEY (admission_id)
+        REFERENCES fact_admission(admission_id)
+);
+---------------------------------------------------------------------------------------
+CREATE DATABASE IF NOT EXISTS healthcare_analytics_dw;
